@@ -5,8 +5,22 @@
 #define GREEN_PIN 19
 #define BLUE_PIN 21
 
-const char ssid[] = "HomeSweetHome";
-const char pass[] = "Mart1rosjana13";
+
+// Red, green, and blue pins for PWM control
+const int redPin = 5;     // 13 corresponds to GPIO13
+const int greenPin = 19;   // 12 corresponds to GPIO12
+const int bluePin = 21;    // 14 corresponds to GPIO14
+
+// Setting PWM frequency, channels and bit resolution
+const int freq = 5000;
+const int redChannel = 0;
+const int greenChannel = 1;
+const int blueChannel = 2;
+// Bit resolution 2^8 = 256
+const int resolution = 8;
+
+const char ssid[] = "2smart_2";
+const char pass[] = "ubuntu123";
 
 WiFiClient net;
 MQTTClient client;
@@ -65,9 +79,18 @@ struct StringParser
 
 void setColorRGB()
 {
-  digitalWrite(RED_PIN, red);
-  digitalWrite(GREEN_PIN, green);
-  digitalWrite(BLUE_PIN, blue);
+  // digitalWrite(RED_PIN, red);
+  // digitalWrite(GREEN_PIN, green);
+  // digitalWrite(BLUE_PIN, blue);
+
+  ledcWrite(redChannel, red);
+  ledcWrite(greenChannel, green);
+  ledcWrite(blueChannel, blue);
+
+  Serial.println("set Colors:  ");
+  Serial.println(red);
+  Serial.println(green);
+  Serial.println(blue);
 }
 
 void actionOnMessage(String topic_, String payload_)
@@ -117,11 +140,11 @@ void actionOnMessage(String topic_, String payload_)
   // greenString.trim();
   numString = "";
 
-  Serial.println("Colors RGB:");
+  Serial.println("Ints from String RGB:");
   Serial.println(red);
   Serial.println(green);
   Serial.println(blue);
-  
+
   // and let's change the color due to RBG palette from MQTT
   setColorRGB();
 }
@@ -135,9 +158,14 @@ void messageReceived(String &topic, String &payload)
 void setup()
 {
   Serial.begin(115200);
-  pinMode(RED_PIN, OUTPUT);
-  pinMode(GREEN_PIN, OUTPUT);
-  pinMode(BLUE_PIN, OUTPUT);
+  ledcSetup(redChannel, freq, resolution);
+  ledcSetup(greenChannel, freq, resolution);
+  ledcSetup(blueChannel, freq, resolution);
+
+  // attach the channel to the GPIO to be controlled
+  ledcAttachPin(redPin, redChannel);
+  ledcAttachPin(greenPin, greenChannel);
+  ledcAttachPin(bluePin, blueChannel);
   WiFi.begin(ssid, pass);
 
   client.begin("broker.emqx.io", net);
