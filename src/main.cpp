@@ -1,15 +1,17 @@
 #include <WiFi.h>
 #include <MQTT.h>
 
-#define RED_PIN 5
-#define GREEN_PIN 19
-#define BLUE_PIN 21
-
+#include <Adafruit_Sensor.h>
+#include "DHT.h"
+#define DHTPIN 4 // Digital pin connected to the DHT sensor
+// Uncomment whatever type you're using!
+#define DHTTYPE DHT11 // DHT 11
+DHT dht(DHTPIN, DHTTYPE);
 
 // Red, green, and blue pins for PWM control
-const int redPin = 5;     // 13 corresponds to GPIO13
-const int greenPin = 19;   // 12 corresponds to GPIO12
-const int bluePin = 21;    // 14 corresponds to GPIO14
+const int redPin = 5;    // 13 corresponds to GPIO13
+const int greenPin = 19; // 12 corresponds to GPIO12
+const int bluePin = 21;  // 14 corresponds to GPIO14
 
 // Setting PWM frequency, channels and bit resolution
 const int freq = 5000;
@@ -79,10 +81,6 @@ struct StringParser
 
 void setColorRGB()
 {
-  // digitalWrite(RED_PIN, red);
-  // digitalWrite(GREEN_PIN, green);
-  // digitalWrite(BLUE_PIN, blue);
-
   ledcWrite(redChannel, red);
   ledcWrite(greenChannel, green);
   ledcWrite(blueChannel, blue);
@@ -155,9 +153,35 @@ void messageReceived(String &topic, String &payload)
   actionOnMessage(topic, payload);
 }
 
+void DHTReadAndPublish()
+{
+  if (millis() - lastMillis > 10000)
+  {
+    lastMillis = millis();
+
+    float temperature = dht.readTemperature();
+    if (isnan(temperature))
+    {
+      Serial.println(F("Failed to read from DHT sensor!"));
+      return;
+    }
+    Serial.print(F("%  Temperature: "));
+    Serial.print(temperature);
+    Serial.print(F("°C "));
+
+    char tempString[8];
+    dtostrf(temperature, 1, 2, tempString);
+    Serial.print("Temperature: ");
+    Serial.println(tempString);
+    client.publish("esp32/temperature", tempString);
+  }
+}
 void setup()
 {
   Serial.begin(115200);
+
+  dht.begin();
+
   ledcSetup(redChannel, freq, resolution);
   ledcSetup(greenChannel, freq, resolution);
   ledcSetup(blueChannel, freq, resolution);
@@ -182,10 +206,5 @@ void loop()
   {
     connect();
   }
-  // publish a message roughly every second.
-  // if (millis() - lastMillis > 10000)
-  // {
-  //   lastMillis = millis();
-  //   client.publish("esp32", "on");
-  // }
+  DHTReadAndPublish();
 }
