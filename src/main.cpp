@@ -4,19 +4,60 @@
 #include <Adafruit_Sensor.h>
 #include "DHT.h"
 
+#include <Adafruit_BME680.h>
+
 #include "temperature_sensor.h"
 #include "rgb_led_routine.h"
 
 // #define DEBUG // uncomment to see debug output 
 
-const char ssid[] = "YOUR_WIFI_SSID";
-const char pass[] = "YOUR_WIFI_PASS";
+const char ssid[] = "HomeNet";
+const char pass[] = "88888888";
 
 #define BROKER_URI "broker.emqx.io"
 
 WiFiClient net;
 MQTTClient client;
 extern DHT dht;
+
+
+#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP  5        /* Time ESP32 will go to sleep (in seconds) */
+
+RTC_DATA_ATTR int bootCount = 0;
+
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+  }
+}
+
+void sleep_setup() {
+  ++bootCount;
+  Serial.println("Boot number: " + String(bootCount));
+
+  print_wakeup_reason();
+
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+  Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
+  " Seconds");
+
+  Serial.println("Going to sleep now");
+  delay(1000);
+  Serial.flush(); 
+  esp_deep_sleep_start();
+  Serial.println("This will never be printed");
+}
 
 void connect() {
   Serial.print("checking wifi...");
@@ -30,7 +71,7 @@ void connect() {
   #endif // DEBUG
 
   Serial.println("connecting...");
-  while (!client.connect("esp32", "", "")) {
+  while (!client.connect("interfer-esp32", "", "")) {
     Serial.print(".");
     client.disconnect();
     delay(2000);
@@ -38,8 +79,8 @@ void connect() {
 
   Serial.println("connected!");
 
-  client.subscribe("esp32");
-  client.subscribe("esp32/color");
+  client.subscribe("interfer-esp32");
+  client.subscribe("interfer-esp32/color");
 }
 
 void actionOnMessage(String topic_, String payload_) {
@@ -72,9 +113,9 @@ void messageReceived(String &topic, String &payload) {
 void setup() {
   Serial.begin(115200);
 
-  dht.begin();
+  // dht.begin();
 
-  initPWM();
+  // initPWM();
 
   WiFi.begin(ssid, pass);
 
@@ -82,6 +123,7 @@ void setup() {
   client.onMessage(messageReceived);
 
   connect();
+  // sleep_setup();
 }
 
 void loop() {
@@ -91,4 +133,29 @@ void loop() {
     connect();
   }
   DHTReadAndPublish();
+  // bme680_routine();
 }
+
+
+
+
+  /*
+  Next we decide what all peripherals to shut down/keep on
+  By default, ESP32 will automatically power down the peripherals
+  not needed by the wakeup source, but if you want to be a poweruser
+  this is for you. Read in detail at the API docs
+  http://esp-idf.readthedocs.io/en/latest/api-reference/system/deep_sleep.html
+  Left the line commented as an example of how to configure peripherals.
+  The line below turns off all RTC peripherals in deep sleep.
+  */
+  //esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+  //Serial.println("Configured all RTC Peripherals to be powered down in sleep");
+
+  /*
+  Now that we have setup a wake cause and if needed setup the
+  peripherals state in deep sleep, we can now start going to
+  deep sleep.
+  In the case that no wake up sources were provided but deep
+  sleep was started, it will sleep forever unless hardware
+  reset occurs.
+  */
