@@ -92,13 +92,13 @@ void actionOnMessage(String topic_, String payload_) {
   #endif // DEBUG
 
   // string payload from "(..., ..., ...)"
-  uint8_t red;   // Red value for RGB
-  uint8_t green; // Green value for RBG
-  uint8_t blue;  // Blue value for RGB
+  // uint8_t red;   // Red value for RGB
+  // uint8_t green; // Green value for RBG
+  // uint8_t blue;  // Blue value for RGB
 
-  TrimPayloadToRGB(payload_, &red, &green, &blue);
+  // TrimPayloadToRGB(payload_, &red, &green, &blue);
 
-  setColorRGB(red, green, blue);
+  // setColorRGB(red, green, blue);
 }
 
 // callback on incoming message

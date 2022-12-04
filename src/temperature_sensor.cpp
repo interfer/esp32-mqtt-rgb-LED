@@ -54,7 +54,7 @@ void DHTReadAndPublish() {
     Serial.println(DHTtemperatureString);
     #endif // DEBUG
 
-    client.publish("interfer-esp32/temperature", DHTtemperatureString);
+    // client.publish("interfer-esp32/temperature", DHTtemperatureString);
 
     
     bme680_routine();
@@ -86,6 +86,13 @@ void bme680_set_fake_params() {
 
   // Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
 }
+void bme680_publish_params() {
+  client.publish("interfer-esp32/temperature", String(bme.temperature));
+  client.publish("interfer-esp32/pressure", String(bme.pressure));
+  client.publish("interfer-esp32/humidity", String(bme.humidity));
+  client.publish("interfer-esp32/gas-resistance", String(bme.gas_resistance));
+}
+
 void bme680_routine() {
   // Tell BME680 to begin measurement.
   // unsigned long endTime = bme.beginReading();
@@ -138,6 +145,8 @@ void bme680_routine() {
   // Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
   // Serial.println(F(" m"));
 
-  Serial.println();
-  delay(2000);
+  // Serial.println();
+  // delay(2000);
+
+  bme680_publish_params();
 }
