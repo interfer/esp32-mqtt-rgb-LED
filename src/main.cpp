@@ -7,7 +7,6 @@
 #include <Adafruit_BME680.h>
 
 #include "temperature_sensor.h"
-#include "rgb_led_routine.h"
 
 // #define DEBUG // uncomment to see debug output 
 
@@ -18,7 +17,6 @@ const char pass[] = "88888888";
 
 WiFiClient net;
 MQTTClient client;
-extern DHT dht;
 
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
@@ -71,7 +69,7 @@ void connect() {
   #endif // DEBUG
 
   Serial.println("connecting...");
-  while (!client.connect("interfer-esp32", "", "")) {
+  while (!client.connect("monitoring-esp32", "", "")) {
     Serial.print(".");
     client.disconnect();
     delay(2000);
@@ -79,8 +77,8 @@ void connect() {
 
   Serial.println("connected!");
 
-  client.subscribe("interfer-esp32");
-  client.subscribe("interfer-esp32/color");
+  client.subscribe("monitoring-esp32");
+  client.subscribe("monitoring-esp32/color");
 }
 
 void actionOnMessage(String topic_, String payload_) {
@@ -90,15 +88,6 @@ void actionOnMessage(String topic_, String payload_) {
   Serial.print("PAYLOAD:  ");
   Serial.println(payload_);
   #endif // DEBUG
-
-  // string payload from "(..., ..., ...)"
-  // uint8_t red;   // Red value for RGB
-  // uint8_t green; // Green value for RBG
-  // uint8_t blue;  // Blue value for RGB
-
-  // TrimPayloadToRGB(payload_, &red, &green, &blue);
-
-  // setColorRGB(red, green, blue);
 }
 
 // callback on incoming message
@@ -112,10 +101,6 @@ void messageReceived(String &topic, String &payload) {
 
 void setup() {
   Serial.begin(115200);
-
-  // dht.begin();
-
-  // initPWM();
 
   WiFi.begin(ssid, pass);
 
@@ -132,30 +117,6 @@ void loop() {
   if (!client.connected()) {
     connect();
   }
-  DHTReadAndPublish();
-  // bme680_routine();
+  // DHTReadAndPublish();
+  bme680_routine();
 }
-
-
-
-
-  /*
-  Next we decide what all peripherals to shut down/keep on
-  By default, ESP32 will automatically power down the peripherals
-  not needed by the wakeup source, but if you want to be a poweruser
-  this is for you. Read in detail at the API docs
-  http://esp-idf.readthedocs.io/en/latest/api-reference/system/deep_sleep.html
-  Left the line commented as an example of how to configure peripherals.
-  The line below turns off all RTC peripherals in deep sleep.
-  */
-  //esp_deep_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-  //Serial.println("Configured all RTC Peripherals to be powered down in sleep");
-
-  /*
-  Now that we have setup a wake cause and if needed setup the
-  peripherals state in deep sleep, we can now start going to
-  deep sleep.
-  In the case that no wake up sources were provided but deep
-  sleep was started, it will sleep forever unless hardware
-  reset occurs.
-  */
